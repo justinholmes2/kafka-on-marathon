@@ -1,23 +1,20 @@
 require 'zk'
-require 'yaml'
 require 'erb'
 
 module Kafka
   class Broker
-    def initialize(heap_size, broker_count, ports, config)
-      @heap_size = heap_size.to_i
+    def initialize()
+      @heap_size = ENV['HEAP_SIZE'].to_i
       @prng = Random.new(Time.now.to_f * 100000)
 
-      @yaml = YAML.load_file(config)
 
-      @zk_servers = @yaml['zk_hosts'].shuffle.join(',')
-      @cluster = @yaml['cluster']
+      @zk_servers = ENV['ZOOKEEPER'] 
+      @cluster = ENV['CLUSTER_NAME'] 
 
       zk_connect
 
-      @ports = ports.split(/,/)
-
-      @broker_count = broker_count.to_i
+      @ports = [9999, 29998]
+      @broker_count = 100 # We can have a maximum of 100 brokers. We will need ot fix this later if need be
 
       @broker_set = get_missing_brokers
       if @broker_set.empty?
@@ -110,11 +107,11 @@ module Kafka
     end
 
     def run
-      @broker_id = @broker_set.to_a.sample(:random => @prng)
+      @broker_id = @broker_set.to_a.first
       become_broker
 
 
-      erb = ERB.new(File.open('server.properties.erb').readlines.map{|x| x.chomp }.join("\n"))
+      erb = ERB.new(File.open('/usr/bin/server.properties.erb').readlines.map{|x| x.chomp }.join("\n"))
       File.open('server.properties', 'w') do |f|
         f.puts erb.result(binding)
       end
@@ -126,18 +123,18 @@ module Kafka
       env = {
         "KAFKA_HEAP_OPTS" => "-XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -Xmx#{@heap_size.to_s}m -Xms#{(@heap_size / 2).to_s}m -XX:NewSize=#{(@heap_size / 3).to_s}m -XX:MaxNewSize=#{(@heap_size / 3).to_s}m -Xss256k -XX:+UseTLAB -XX:+AlwaysPreTouch",
         "SCALA_VERSION" => "2.10.3",
-        "KAFKA_LOG4J_OPTS" => "-Dlog4j.configuration=file:log4j.properties",
+        "KAFKA_LOG4J_OPTS" => "-Dlog4j.configuration=file:#{ENV["KAFKA_HOME"]}/config/log4j.properties",
         "KAFKA_JVM_PERFORMANCE_OPTS" => "-server -XX:+UseCompressedOops -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC",
-        "JMX_PORT" => @ports[1],
+        "JMX_PORT" => @ports[1].to_s,
       }
 
-      %x(tar xf kafka-exec.tar.xz)
-      cmd = "./kafka-exec/bin/kafka-run-class.sh -name kafkaServer -loggc kafka.Kafka server.properties".freeze
+      cmd = ENV["KAFKA_HOME"] +"/bin/kafka-run-class.sh -name kafkaServer -loggc kafka.Kafka server.properties".freeze
       last_finished = 0
 
       loop do
         puts "About to run:"
-        puts env, cmd
+        puts env
+        puts cmd
         GC.start # clean up memory
         system env, cmd
         finished = Time.now.to_f
@@ -155,7 +152,7 @@ module Kafka
 end
 
 begin
-  broker = Kafka::Broker.new ARGV[0], ARGV[1], ARGV[2], ARGV[3]
+  broker = Kafka::Broker.new
   broker.run
 rescue => e
   $stdout.puts $!.inspect, $@
