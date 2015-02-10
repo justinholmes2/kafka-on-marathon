@@ -111,7 +111,7 @@ module Kafka
       become_broker
 
 
-      erb = ERB.new(File.open('/usr/bin/server.properties.erb').readlines.map{|x| x.chomp }.join("\n"))
+      erb = ERB.new(File.open('server.properties.erb').readlines.map{|x| x.chomp }.join("\n"))
       File.open('server.properties', 'w') do |f|
         f.puts erb.result(binding)
       end
@@ -123,7 +123,7 @@ module Kafka
       env = {
         "KAFKA_HEAP_OPTS" => "-XX:+UseConcMarkSweepGC -XX:+CMSIncrementalMode -Xmx#{@heap_size.to_s}m -Xms#{(@heap_size / 2).to_s}m -XX:NewSize=#{(@heap_size / 3).to_s}m -XX:MaxNewSize=#{(@heap_size / 3).to_s}m -Xss256k -XX:+UseTLAB -XX:+AlwaysPreTouch",
         "SCALA_VERSION" => "2.10.3",
-        "KAFKA_LOG4J_OPTS" => "-Dlog4j.configuration=file:#{ENV["KAFKA_HOME"]}/config/log4j.properties",
+        "KAFKA_LOG4J_OPTS" => "-Dlog4j.configuration=file:./kafka_2.10-0.8.1.1/config/log4j.properties",
         "KAFKA_JVM_PERFORMANCE_OPTS" => "-server -XX:+UseCompressedOops -XX:+CMSClassUnloadingEnabled -XX:+CMSScavengeBeforeRemark -XX:+DisableExplicitGC",
         "JMX_PORT" => @ports[1].to_s,
       }
