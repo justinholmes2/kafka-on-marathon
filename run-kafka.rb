@@ -13,7 +13,7 @@ module Kafka
 
       zk_connect
 
-      @ports = [9999, 29998]
+      @ports = [ENV['PORT0'].to_i, ENV['PORT1'].to_i]
       @broker_count = 100 # We can have a maximum of 100 brokers. We will need ot fix this later if need be
 
       @broker_set = get_missing_brokers
