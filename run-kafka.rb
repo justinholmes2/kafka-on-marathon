@@ -128,7 +128,7 @@ module Kafka
         "JMX_PORT" => @ports[1].to_s,
       }
 
-      cmd = ENV["KAFKA_HOME"] +"/bin/kafka-run-class.sh -name kafkaServer -loggc kafka.Kafka server.properties".freeze
+      cmd = "./kafka_2.10-0.8.1.1/bin/kafka-run-class.sh -name kafkaServer -loggc kafka.Kafka server.properties".freeze
       last_finished = 0
 
       loop do
